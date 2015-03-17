@@ -9,5 +9,6 @@ herokuAppName in Compile := "wundercal"
 lazy val root = (project in file(".")).enablePlugins(PlayJava)
 
 libraryDependencies ++= Seq(
-  ws
+  ws,
+  "org.mnode.ical4j" % "ical4j" % "1.0.2"
 )
