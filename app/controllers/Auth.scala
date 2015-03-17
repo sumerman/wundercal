@@ -12,9 +12,11 @@ import scala.util.Random
 trait AuthBase { self: Controller =>
   val ID_CONF="wundercal.client.id"
   val SECRET_CONF="wundercal.client.secret"
+  val SECURE_CONF="wundercal.client.secure_back"
 
   val clientId = application.configuration.getString(ID_CONF).getOrElse("")
   val clientSecret = application.configuration.getString(SECRET_CONF).getOrElse("")
+  val clientSecure = application.configuration.getBoolean(SECURE_CONF).getOrElse(false)
 
   val WUNDERAUTH="https://www.wunderlist.com/oauth/authorize"
   val WUNDERCODE="https://www.wunderlist.com/oauth/access_token"
@@ -28,7 +30,7 @@ trait AuthBase { self: Controller =>
   def successRoute: Call
 
   def auth = Action { implicit req =>
-    val encCB = helper.urlEncode(wunderbackRoute.absoluteURL(req.secure))
+    val encCB = helper.urlEncode(wunderbackRoute.absoluteURL(clientSecure))
     val state = helper.urlEncode(Random.nextInt().toString)
     Redirect(s"$WUNDERAUTH?client_id=$clientId&redirect_uri=$encCB&state=$state")
       .withSession(req.session + (sessionStateKey -> state))
