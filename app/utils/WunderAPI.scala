@@ -6,11 +6,13 @@ import controllers.Auth
 import play.api.Logger
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.JsValue
-import play.api.mvc.{Action, Result, Results}
+import play.api.mvc.{Request, Action, Result, Results}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 trait WunderAPI extends Results {
+  import play.api.Play.current
+
   val baseURLString = "https://a.wunderlist.com/api/v1/"
   private def methodURL(wunderAPIMethod: Method) = {
     val base = if (baseURLString.last != '/') baseURLString + '/'
@@ -46,9 +48,12 @@ trait WunderAPI extends Results {
 
   object WunderAction {
     type Response = (WSResponseHeaders, Enumerator[Array[Byte]])
-    type APIFun[T] = Method => Future[T]
 
-    import play.api.Play.current
+    type APIFun[T] = Method => Future[T]
+    trait API[T] {
+      def call: APIFun[T]
+      def token: String
+    }
 
     private def call_base(authToken: String, m: Method): WSRequestHolder =
       WS.url(methodURL(m).toString)
@@ -71,11 +76,16 @@ trait WunderAPI extends Results {
           throw UnauthorizedException
       }
 
-    def apply_base[T](call: (String => APIFun[T]), f: APIFun[T] => Future[Result])(implicit ec: ExecutionContext) =
+    def context_base[T](token: Option[String], wcall: (String => APIFun[T]), f: API[T] => Future[Result])
+                       (implicit ec: ExecutionContext) =
       Action.async { implicit req =>
-        Auth.token match {
+        token.orElse(Auth.token) match {
           case Some(authToken) =>
-            f(call(authToken)) recover {
+            val api = new API[T] {
+              def call = wcall(authToken)
+              def token = authToken
+            }
+            f(api) recover {
               case UnauthorizedException => authFail
               case e:ConnectException =>
                 Logger.error("Wunderlist API is unreachable", e)
@@ -89,7 +99,16 @@ trait WunderAPI extends Results {
         }
       }
 
-    def apply(f: APIFun[JsValue] => Future[Result])(implicit ec: ExecutionContext) = apply_base(call_json, f)(ec)
-    def stream(f: APIFun[Response] => Future[Result])(implicit ec: ExecutionContext) = apply_base(call_stream, f)(ec)
+    def apply(token: String) = new {
+      def json(f: API[JsValue] => Future[Result])(implicit ec: ExecutionContext) =
+        context_base(Some(token), call_json, f)(ec)
+      def stream(f: API[Response] => Future[Result])(implicit ec: ExecutionContext) =
+        context_base(Some(token), call_stream, f)(ec)
+    }
+
+    def json(f: API[JsValue] => Future[Result])(implicit ec: ExecutionContext) =
+      context_base(None, call_json, f)(ec)
+    def stream(f: API[Response] => Future[Result])(implicit ec: ExecutionContext) =
+      context_base(None, call_stream, f)(ec)
   }
 }
