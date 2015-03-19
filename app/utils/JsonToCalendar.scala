@@ -53,15 +53,20 @@ object JsonToCalendar {
       Some(event)
   }.map(_.getOrElse(new VEvent()))
 
-  private val events2calendar = Iteratee.fold[VEvent, Option[Calendar]](None) {
+  private def events2calendar(name: String) = Iteratee.fold[VEvent, Option[Calendar]](None) {
     (maybeCal, event) =>
-      lazy val newCal = new Calendar()
-      val cal = maybeCal.getOrElse(newCal)
+      val cal = maybeCal match {
+        case Some(c) => c
+        case None =>
+          val newCal = new Calendar()
+          newCal.getProperties.add(new property.Name(name))
+          newCal
+      }
       cal.getComponents.add(event)
       Some(cal)
   }.map(_.getOrElse(new Calendar()))
 
   val taskParser = (taskSchema compose skipEmptyProps) transform props2task
-  val taskListParser = (jsArray(_ => taskParser) compose ignoreNoDate) transform events2calendar
+  def taskListParser(name: String = "") = (jsArray(_ => taskParser) compose ignoreNoDate) transform events2calendar(name)
   
 }

@@ -50,8 +50,9 @@ trait WunderAPI extends Results {
     type Response = (WSResponseHeaders, Enumerator[Array[Byte]])
 
     type APIFun[T] = Method => Future[T]
-    trait API[T] {
-      def call: APIFun[T]
+    trait API {
+      def json: APIFun[JsValue]
+      def stream: APIFun[Response]
       def token: String
     }
 
@@ -76,13 +77,14 @@ trait WunderAPI extends Results {
           throw UnauthorizedException
       }
 
-    def context_base[T](token: Option[String], wcall: (String => APIFun[T]), f: API[T] => Future[Result])
+    def context_base(token: Option[String], f: API => Future[Result])
                        (implicit ec: ExecutionContext) =
       Action.async { implicit req =>
         token.orElse(Auth.token) match {
           case Some(authToken) =>
-            val api = new API[T] {
-              def call = wcall(authToken)
+            val api = new API {
+              def json = call_json(authToken)
+              def stream = call_stream(authToken)
               def token = authToken
             }
             f(api) recover {
@@ -99,16 +101,7 @@ trait WunderAPI extends Results {
         }
       }
 
-    def apply(token: String) = new {
-      def json(f: API[JsValue] => Future[Result])(implicit ec: ExecutionContext) =
-        context_base(Some(token), call_json, f)(ec)
-      def stream(f: API[Response] => Future[Result])(implicit ec: ExecutionContext) =
-        context_base(Some(token), call_stream, f)(ec)
-    }
-
-    def json(f: API[JsValue] => Future[Result])(implicit ec: ExecutionContext) =
-      context_base(None, call_json, f)(ec)
-    def stream(f: API[Response] => Future[Result])(implicit ec: ExecutionContext) =
-      context_base(None, call_stream, f)(ec)
+    def apply(token: String)(f: API => Future[Result])(implicit ec: ExecutionContext) = context_base(Some(token), f)
+    def apply(f: API => Future[Result])(implicit ec: ExecutionContext) = context_base(None, f)
   }
 }
