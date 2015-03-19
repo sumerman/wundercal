@@ -10,5 +10,6 @@ lazy val root = (project in file(".")).enablePlugins(PlayJava)
 
 libraryDependencies ++= Seq(
   ws,
-  "org.mnode.ical4j" % "ical4j" % "1.0.2"
+  "org.mnode.ical4j" % "ical4j" % "1.0.2",
+  "com.typesafe.play.extras" %% "iteratees-extras" % "1.4.0"
 )
