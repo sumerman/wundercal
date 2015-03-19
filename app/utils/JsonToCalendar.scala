@@ -1,5 +1,7 @@
 package utils
 
+import net.fortuna.ical4j.model.property.XProperty
+
 object JsonToCalendar {
   import net.fortuna.ical4j.model.component.VEvent
   import play.api.libs.iteratee._
@@ -60,6 +62,9 @@ object JsonToCalendar {
         case None =>
           val newCal = new Calendar()
           newCal.getProperties.add(new property.Name(name))
+          newCal.getProperties.add(new XProperty("X-WR-CALNAME", name))
+          newCal.getProperties.add(property.Version.VERSION_2_0)
+          newCal.getProperties.add(property.CalScale.GREGORIAN)
           newCal
       }
       cal.getComponents.add(event)

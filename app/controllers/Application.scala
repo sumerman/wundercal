@@ -49,10 +49,13 @@ object Application extends Controller with WunderAPI {
   def tasksCalendar(taskListUrl: String) = decodeTaskListUrl(taskListUrl) match {
     case None => Action { BadRequest("Invalid task list calendar id") }
     case Some((listId, token)) => WunderAction(token) { api =>
-      api.stream(Methods.Tasks(listId)) flatMap {
-        case (_, body) =>
-          val parser = Encoding.decode() ><> Combinators.errorReporter &>> JsonToCalendar.taskListParser()
-          body |>>> parser map { cal => Ok(cal.toString).as("text/calendar") }
+      api.json(Methods.List(listId)) flatMap { listJs =>
+        val title = (listJs \ "title").asOpt[String].getOrElse("")
+        api.stream(Methods.Tasks(listId)) flatMap {
+          case (_, body) =>
+            val parser = Encoding.decode() ><> Combinators.errorReporter &>> JsonToCalendar.taskListParser(title)
+            body |>>> parser map { cal => Ok(cal.toString).as("text/calendar") }
+        }
       }
     }
   }
