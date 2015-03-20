@@ -34,6 +34,9 @@ trait WunderAPI extends Results {
     case class List(id: ListID) extends Method {
       def spec = s"${Lists.spec}/${id.toString}"
     }
+    case object Folders extends Method {
+      def spec = s"./folders"
+    }
     case class Tasks(listId: ListID) extends Method {
       def spec = s"./tasks?list_id=${listId.toString}"
     }

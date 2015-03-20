@@ -1,7 +1,5 @@
 package controllers
 
-import com.google.common.base.Charsets
-import com.google.common.io.BaseEncoding
 import play.api.Logger
 import play.api.Play._
 import play.api.libs.Crypto
@@ -11,6 +9,7 @@ import play.extras.iteratees.{Encoding, Combinators}
 
 import utils.{JsonToCalendar, WunderAPI}
 
+import scala.concurrent.Future
 import scala.util.Random
 
 object Application extends Controller with WunderAPI {
@@ -40,21 +39,54 @@ object Application extends Controller with WunderAPI {
     s"webcal://${req.host}$hostRelative"
   }
 
-  def lists = WunderAction { api =>
+  type ListId = Long
+
+  def getFoldersReverseIndex(api: WunderAction.API): Future[Map[ListId, String]] =
+    api.json(Methods.Folders) map { jsonResp =>
+      val jsonFolders = jsonResp.asOpt[List[JsObject]].getOrElse(Nil)
+      jsonFolders flatMap { obj =>
+        val title = (obj \ "title").asOpt[String].getOrElse("")
+        val listIds = (obj \ "list_ids").asOpt[List[ListId]].getOrElse(Nil)
+        listIds.map((_, title))
+      } toMap
+    }
+
+  case class TaskList(id: ListId, name: String)
+  def getTaskLists(api: WunderAction.API): Future[List[TaskList]] =
+    api.json(Methods.Lists) map { jsonResp =>
+      val jsItems = jsonResp.asOpt[List[JsObject]].getOrElse(Nil)
+      for {
+        obj <- jsItems
+        id <- (obj \ "id").asOpt[Long]
+        name <- (obj \ "title").asOpt[String]
+      } yield TaskList(id, name)
+    }
+
+  def index = WunderAction { api =>
+    import collection.mutable.{HashMap, Set, MultiMap}
     import scala.collection.JavaConversions._
 
-    api.json(Methods.Lists) map { body =>
-      val maybeItems = body.asOpt[List[JsObject]] map { arr =>
-        arr.map({ obj =>
-          for {
-            id <- (obj \ "id").asOpt[Long]
-            name <- (obj \ "title").asOpt[String]
-          } yield (name, makeCalendarUrl(id, api.token, api.request))
-        }).flatten
+    getFoldersReverseIndex(api) flatMap { list2folder =>
+      getTaskLists(api) map { taskLists =>
+        val folders = new HashMap[Option[String], Set[TaskList]]
+          with MultiMap[Option[String], TaskList]
+        taskLists foreach { tlist =>
+          folders.addBinding(list2folder.get(tlist.id), tlist)
+        }
+        val listsIndex = folders map {
+          case (folder, tLists) =>
+            val formatted = tLists map {
+              case TaskList(id, name) =>
+                (name, makeCalendarUrl(id, api.token, api.request))
+            }
+          (folder, formatted.toMap)
+        } toMap
+        val noFolder = listsIndex.getOrDefault(None, Map.empty)
+        val withFolder = listsIndex.filterNot(_._1.isEmpty) map {
+          case (Some(folder), lists) => (folder, mapAsJavaMap(lists))
+        }
+        Ok(views.html.Application.lists(noFolder, withFolder)) as HTML
       }
-      val items = maybeItems.getOrElse(Nil)
-      val content = views.html.Application.lists(items)
-      Ok(content) as HTML
     }
   }
 

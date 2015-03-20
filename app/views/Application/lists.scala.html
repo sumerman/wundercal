@@ -1,4 +1,5 @@
-@(items: List[(String, String)])
+@(noFolder: Map[String, String], folders: Map[String, Map[String, String]])
+@import java.math.BigInteger; var i=0
 
 <!DOCTYPE html>
 <html>
@@ -18,7 +19,15 @@
         }
 
         .help-text {
-            padding: 5px;
+            padding: 10px;
+        }
+
+        .glyphicon {
+            margin-right: 5px;
+        }
+
+        .in-folder {
+            padding-left: 25px;
         }
     </style>
 </head>
@@ -29,14 +38,31 @@
         <div class="panel-heading">
             <div class="row">
                 <div class="col-xs-4"><img src="/assets/wundercal_logo.png" align="right" width="60px"></div>
-                <div class="col-xs-6"><h2>&nbsp;Wundercal</h2></div>
+                <div class="col-xs-6"><h2>Wundercal</h2></div>
             </div>
         </div>
         <div class="panel-body">
             <div class="text-muted help-text">Click on a list to export it into your calender app</div>
+            <div class="panel panel-default">
+            @for((folder, items) <- folders) {
+                @{i += 1}
+                <div class="panel-heading">
+                    <a class="text-muted" data-toggle="collapse" href="#collapse-folder-@i">
+                        <span class="glyphicon glyphicon-folder-open"></span>@folder
+                    </a>
+                </div>
+                <div id="collapse-folder-@i" class="panel-collapse collapse in" aria-expanded="true">
+                    <div class="list-group">
+                        @for(i @ (name, url) <- items) {
+                        <a href="@url" class="list-group-item in-folder"><span class="glyphicon glyphicon-calendar"></span>@name</a>
+                        }
+                    </div>
+                </div>
+            }
+            </div>
             <div class="list-group">
-                @for(i @ (name, url) <- items) {
-                <a href="@url" class="list-group-item"><span class="glyphicon glyphicon-list"></span>&nbsp;@name</a>
+                @for(i @ (name, url) <- noFolder) {
+                <a href="@url" class="list-group-item"><span class="glyphicon glyphicon-calendar"></span>@name</a>
                 }
             </div>
         </div>
