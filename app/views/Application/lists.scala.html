@@ -5,12 +5,14 @@
 <head lang="en">
     <meta charset="UTF-8">
     <title>Wundercal</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap-theme.min.css">
 
     <style type="text/css">
         @@media (min-width: 0px) {
             .container {
+                margin-top: 10px;
                 max-width: 500px;
             }
         }
@@ -19,16 +21,19 @@
 <body>
 <div class="container">
 
-    <div class="panel panel-defaul">
+    <div class="panel panel-danger">
         <div class="panel-heading">
-            <h1>Yor lists:</h1>
+            <div class="row">
+                <div class="col-xs-12 col-md-8"><h2>&nbsp;Your lists</h2></div>
+                <div class="col-xs-6 col-md-4"><img src="/assets/wundercal_logo.png" align="right" width="50%"></div>
+            </div>
         </div>
         <div class="panel-body">
-            <ul class="list-group">
+            <div class="list-group">
                 @for(i @ (name, url) <- items) {
-                <li class="list-group-item"><a href="@url">@name</a></li>
+                <a href="@url" class="list-group-item"><span class="glyphicon glyphicon-list"></span>&nbsp;@name</a>
                 }
-            </ul>
+            </div>
         </div>
     </div>
 
