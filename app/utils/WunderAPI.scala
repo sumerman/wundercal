@@ -6,7 +6,7 @@ import controllers.Auth
 import play.api.Logger
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.JsValue
-import play.api.mvc.{Request, Action, Result, Results}
+import play.api.mvc._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -53,6 +53,7 @@ trait WunderAPI extends Results {
     trait API {
       def json: APIFun[JsValue]
       def stream: APIFun[Response]
+      def request: Request[AnyContent]
       def token: String
     }
 
@@ -86,6 +87,7 @@ trait WunderAPI extends Results {
               def json = call_json(authToken)
               def stream = call_stream(authToken)
               def token = authToken
+              def request = req
             }
             f(api) recover {
               case UnauthorizedException => authFail

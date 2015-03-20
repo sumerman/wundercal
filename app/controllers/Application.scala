@@ -11,38 +11,50 @@ import play.extras.iteratees.{Encoding, Combinators}
 
 import utils.{JsonToCalendar, WunderAPI}
 
+import scala.util.Random
+
 object Application extends Controller with WunderAPI {
   import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
   def authFail = Redirect(routes.Auth.auth()).withNewSession
 
   def encodeTaskListUrl(id: Long, token: String): String = {
-    val string = s"$id+:$token"
-    val encrypted = Crypto.encryptAES(string)
-    BaseEncoding.base64Url().encode(encrypted.getBytes(Charsets.UTF_8))
+    val salt = Crypto.sign(s"$id+$token")
+    val salt1 = salt.substring(0, Random.nextInt(salt.length-5)+5)
+    val string = s"$id+$salt1+$token+$salt1"
+    Crypto.encryptAES(string)
   }
 
   def decodeTaskListUrl(str: String): Option[(Long, String)] = {
-    val encBytes = BaseEncoding.base64Url().decode(str)
-    val decStr = Crypto.decryptAES(new String(encBytes))
-    decStr.split("\\+:") match {
-      case Array(id, token) =>
+    val decStr = Crypto.decryptAES(str)
+    decStr.split("\\+") match {
+      case Array(id, _, token, _) =>
         Some((id.toLong, token))
       case _ => None
     }
   }
 
+  def makeCalendarUrl(id: Long, tok: String, req: Request[_]): String = {
+    val calId = encodeTaskListUrl(id, tok)
+    val hostRelative = routes.Application.tasksCalendar(calId).url
+    s"webcal://${req.host}$hostRelative"
+  }
+
   def lists = WunderAction { api =>
+    import scala.collection.JavaConversions._
+
     api.json(Methods.Lists) map { body =>
       val maybeItems = body.asOpt[List[JsObject]] map { arr =>
-        arr map { obj =>
+        arr.map({ obj =>
           for {
             id <- (obj \ "id").asOpt[Long]
             name <- (obj \ "title").asOpt[String]
-          } yield (name, encodeTaskListUrl(id, api.token))
-        }
+          } yield (name, makeCalendarUrl(id, api.token, api.request))
+        }).flatten
       }
-      maybeItems.map(is => Ok(is.toString)).getOrElse(BadGateway)
+      val items = maybeItems.getOrElse(Nil)
+      val content = views.html.Application.lists(items)
+      Ok(content) as HTML
     }
   }
 
@@ -53,7 +65,8 @@ object Application extends Controller with WunderAPI {
         val title = (listJs \ "title").asOpt[String].getOrElse("")
         api.stream(Methods.Tasks(listId)) flatMap {
           case (_, body) =>
-            val parser = Encoding.decode() ><> Combinators.errorReporter &>> JsonToCalendar.taskListParser(title)
+            val json2cal = JsonToCalendar.taskListParser(title)
+            val parser = Encoding.decode() ><> Combinators.errorReporter &>> json2cal
             body |>>> parser map { cal => Ok(cal.toString).as("text/calendar") }
         }
       }

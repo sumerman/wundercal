@@ -1,0 +1,41 @@
+@(items: List[(String, String)])
+
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title>Wundercal</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap-theme.min.css">
+
+    <style type="text/css">
+        @@media (min-width: 1200px) {
+            .container {
+                width: 500px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <div class="panel panel-defaul">
+        <div class="panel-heading">
+            <h1>Yor lists:</h1>
+        </div>
+        <div class="panel-body">
+            <ul class="list-group">
+                @for(i @ (name, url) <- items) {
+                <li class="list-group-item"><a href="@url">@name</a></li>
+                }
+            </ul>
+        </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+</div>
+</body>
+</html>
