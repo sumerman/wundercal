@@ -16,6 +16,10 @@
                 max-width: 500px;
             }
         }
+
+        .help-text {
+            padding: 5px;
+        }
     </style>
 </head>
 <body>
@@ -24,16 +28,23 @@
     <div class="panel panel-danger">
         <div class="panel-heading">
             <div class="row">
-                <div class="col-xs-12 col-md-8"><h2>&nbsp;Your lists</h2></div>
-                <div class="col-xs-6 col-md-4"><img src="/assets/wundercal_logo.png" align="right" width="50%"></div>
+                <div class="col-xs-4"><img src="/assets/wundercal_logo.png" align="right" width="60px"></div>
+                <div class="col-xs-6"><h2>&nbsp;Wundercal</h2></div>
             </div>
         </div>
         <div class="panel-body">
+            <div class="text-muted help-text">Click on a list to export it into your calender app</div>
             <div class="list-group">
                 @for(i @ (name, url) <- items) {
                 <a href="@url" class="list-group-item"><span class="glyphicon glyphicon-list"></span>&nbsp;@name</a>
                 }
             </div>
+        </div>
+        <div class="panel-footer">
+            <div class="pull-right"><a class="github-button" href="https://github.com/sumerman/wundercal"
+                                       data-count-href="/sumerman/wundercal/stargazers"
+                                       data-count-api="/repos/sumerman/wundercal#stargazers_count">GitHub</a></div>
+            <div class="text-muted">Make Wundercal better</div>
         </div>
     </div>
 
@@ -41,6 +52,8 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
     <!-- Include all compiled plugins (below), or include individual files as needed -->
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+    <!-- Place this tag right after the last button or just before your close body tag. -->
+    <script async defer id="github-bjs" src="https://buttons.github.io/buttons.js"></script>
 </div>
 </body>
 </html>
