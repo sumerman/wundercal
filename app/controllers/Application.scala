@@ -1,7 +1,5 @@
 package controllers
 
-import play.api.Logger
-import play.api.Play._
 import play.api.libs.Crypto
 import play.api.libs.json._
 import play.api.mvc._
@@ -68,19 +66,14 @@ object Application extends Controller with WunderAPI {
 
     getFoldersReverseIndex(api) flatMap { list2folder =>
       getTaskLists(api) map { taskLists =>
-        val folders = new HashMap[Option[String], Set[TaskList]]
-          with MultiMap[Option[String], TaskList]
-        taskLists foreach { tlist =>
-          folders.addBinding(list2folder.get(tlist.id), tlist)
+        val folders = new HashMap[Option[String], Set[(String, String)]]
+          with MultiMap[Option[String], (String, String)]
+        taskLists foreach { tList =>
+          val calUrl = makeCalendarUrl(tList.id, api.token, api.request)
+          val item = (tList.name, calUrl)
+          folders.addBinding(list2folder.get(tList.id), item)
         }
-        val listsIndex = folders map {
-          case (folder, tLists) =>
-            val formatted = tLists map {
-              case TaskList(id, name) =>
-                (name, makeCalendarUrl(id, api.token, api.request))
-            }
-          (folder, formatted.toList.sorted)
-        } toMap
+        val listsIndex = folders.toMap.mapValues(_.toList.sorted)
         val noFolder = listsIndex.getOrDefault(None, Nil)
         val withFolder = listsIndex.filterNot(_._1.isEmpty) map {
           case (Some(folder), lists) => (folder, seqAsJavaList(lists))
