@@ -79,11 +79,11 @@ object Application extends Controller with WunderAPI {
               case TaskList(id, name) =>
                 (name, makeCalendarUrl(id, api.token, api.request))
             }
-          (folder, formatted.toMap)
+          (folder, formatted.toList.sorted)
         } toMap
-        val noFolder = listsIndex.getOrDefault(None, Map.empty)
+        val noFolder = listsIndex.getOrDefault(None, Nil)
         val withFolder = listsIndex.filterNot(_._1.isEmpty) map {
-          case (Some(folder), lists) => (folder, mapAsJavaMap(lists))
+          case (Some(folder), lists) => (folder, seqAsJavaList(lists))
         }
         Ok(views.html.Application.lists(noFolder, withFolder)) as HTML
       }
