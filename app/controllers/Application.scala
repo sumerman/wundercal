@@ -39,8 +39,8 @@ object Application extends Controller with WunderAPI {
 
   type ListId = Long
 
-  def getFoldersReverseIndex(api: WunderAction.API): Future[Map[ListId, String]] =
-    api.json(Methods.Folders) map { jsonResp =>
+  def getFoldersReverseIndex[A](apiReq: WunderAPIRequest[A]): Future[Map[ListId, String]] =
+    apiReq.json(Methods.Folders) map { jsonResp =>
       val jsonFolders = jsonResp.asOpt[List[JsObject]].getOrElse(Nil)
       jsonFolders flatMap { obj =>
         val title = (obj \ "title").asOpt[String].getOrElse("")
@@ -50,8 +50,8 @@ object Application extends Controller with WunderAPI {
     }
 
   case class TaskList(id: ListId, name: String)
-  def getTaskLists(api: WunderAction.API): Future[List[TaskList]] =
-    api.json(Methods.Lists) map { jsonResp =>
+  def getTaskLists[A](apiReq: WunderAPIRequest[A]): Future[List[TaskList]] =
+    apiReq.json(Methods.Lists) map { jsonResp =>
       val jsItems = jsonResp.asOpt[List[JsObject]].getOrElse(Nil)
       for {
         obj <- jsItems
@@ -60,16 +60,16 @@ object Application extends Controller with WunderAPI {
       } yield TaskList(id, name)
     }
 
-  def index = WunderAction { api =>
+  def index = WunderAction.async { apiReq =>
     import collection.mutable.{HashMap, Set, MultiMap}
     import scala.collection.JavaConversions._
 
-    getFoldersReverseIndex(api) flatMap { list2folder =>
-      getTaskLists(api) map { taskLists =>
+    getFoldersReverseIndex(apiReq) flatMap { list2folder =>
+      getTaskLists(apiReq) map { taskLists =>
         val folders = new HashMap[Option[String], Set[(String, String)]]
           with MultiMap[Option[String], (String, String)]
         taskLists foreach { tList =>
-          val calUrl = makeCalendarUrl(tList.id, api.token, api.request)
+          val calUrl = makeCalendarUrl(tList.id, apiReq.token, apiReq)
           val item = (tList.name, calUrl)
           folders.addBinding(list2folder.get(tList.id), item)
         }
@@ -86,7 +86,7 @@ object Application extends Controller with WunderAPI {
 
   def tasksCalendar(taskListUrl: String) = decodeTaskListUrl(taskListUrl) match {
     case None => Action { BadRequest("Invalid task list calendar id") }
-    case Some((listId, token)) => WunderAction(token) { api =>
+    case Some((listId, token)) => WunderAction(token).async { api =>
       api.json(Methods.List(listId)) flatMap { listJs =>
         val title = (listJs \ "title").asOpt[String].getOrElse("")
         api.stream(Methods.Tasks(listId)) flatMap {

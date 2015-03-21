@@ -73,6 +73,7 @@ object JsonToCalendar {
   }.map(_.getOrElse(new Calendar()))
 
   val taskParser = (taskSchema compose skipEmptyProps) transform props2task
-  def taskListParser(name: String = "") = (jsArray(_ => taskParser) compose ignoreNoDate) transform events2calendar(name)
+  def taskListParser(name: String = "") =
+    (jsArray(_ => taskParser) compose ignoreNoDate) transform events2calendar(name)
   
 }

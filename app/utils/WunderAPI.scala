@@ -10,7 +10,7 @@ import play.api.mvc._
 
 import scala.concurrent.{ExecutionContext, Future}
 
-trait WunderAPI extends Results {
+trait WunderAPI {
   import play.api.Play.current
 
   val baseURLString = "https://a.wunderlist.com/api/v1/"
@@ -49,16 +49,18 @@ trait WunderAPI extends Results {
 
   import play.api.libs.ws._
 
-  object WunderAction {
-    type Response = (WSResponseHeaders, Enumerator[Array[Byte]])
+  type APIFun[T] = Method => Future[T]
+  type Response = (WSResponseHeaders, Enumerator[Array[Byte]])
 
-    type APIFun[T] = Method => Future[T]
-    trait API {
-      def json: APIFun[JsValue]
-      def stream: APIFun[Response]
-      def request: Request[AnyContent]
-      def token: String
-    }
+  abstract class WunderAPIRequest[A](req: Request[A]) extends WrappedRequest[A](req) {
+    def json: APIFun[JsValue]
+    def stream: APIFun[Response]
+    def token: String
+  }
+
+  class WunderAction(token: Option[String] = None) extends ActionBuilder[WunderAPIRequest] with Results {
+
+    implicit val ec = this.executionContext
 
     private def call_base(authToken: String, m: Method): WSRequestHolder =
       WS.url(methodURL(m).toString)
@@ -67,46 +69,44 @@ trait WunderAPI extends Results {
           "X-Client-ID" -> Auth.clientId
         )
 
-    private def call_json(authToken: String)(m: Method)(implicit ec: ExecutionContext): Future[JsValue] =
+    private def call_json(authToken: String)(m: Method): Future[JsValue] =
       call_base(authToken, m).get().map {
         case resp if resp.status == 200 => resp.json
         case resp if resp.status == 401 =>
           throw UnauthorizedException
       }
 
-    private def call_stream(authToken: String)(m: Method)(implicit ec: ExecutionContext): Future[Response] =
+    private def call_stream(authToken: String)(m: Method): Future[Response] =
       call_base(authToken, m).getStream().map {
         case resp@(h, body) if h.status == 200 => resp
         case resp@(h, _)    if h.status == 401 =>
           throw UnauthorizedException
       }
 
-    def context_base(token: Option[String], f: API => Future[Result])
-                       (implicit ec: ExecutionContext) =
-      Action.async { implicit req =>
-        token.orElse(Auth.token) match {
-          case Some(authToken) =>
-            val api = new API {
-              def json = call_json(authToken)
-              def stream = call_stream(authToken)
-              def token = authToken
-              def request = req
-            }
-            f(api) recover {
-              case UnauthorizedException => authFail
-              case e:ConnectException =>
-                Logger.error("Wunderlist API is unreachable", e)
-                ServiceUnavailable
-              case e =>
-                Logger.error("Wunderlist API error", e)
-                InternalServerError
-            }
-          case None =>
-            Future { authFail }
-        }
+    override def invokeBlock[A](r: Request[A], block: WunderAPIRequest[A] => Future[Result]) = {
+      implicit val req = r
+      token.orElse(Auth.token) match {
+        case None => Future { authFail }
+        case Some(authToken) =>
+          val api = new WunderAPIRequest(req) {
+            def json = call_json(authToken)
+            def stream = call_stream(authToken)
+            def token = authToken
+          }
+          block(api) recover {
+            case UnauthorizedException => authFail
+            case e: ConnectException =>
+              Logger.error("Wunderlist API is unreachable", e)
+              ServiceUnavailable
+            case e =>
+              Logger.error("Wunderlist API error", e)
+              InternalServerError
+          }
       }
+    }
+  }
 
-    def apply(token: String)(f: API => Future[Result])(implicit ec: ExecutionContext) = context_base(Some(token), f)
-    def apply(f: API => Future[Result])(implicit ec: ExecutionContext) = context_base(None, f)
+  object WunderAction extends WunderAction(None) {
+    def apply(token: String) = new WunderAction(Some(token))
   }
 }
