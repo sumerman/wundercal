@@ -75,8 +75,9 @@ object Application extends Controller with WunderAPI {
         }
         val listsIndex = folders.toMap.mapValues(_.toList.sorted)
         val noFolder = listsIndex.getOrDefault(None, Nil)
-        val withFolder = listsIndex.filterNot(_._1.isEmpty) map {
-          case (Some(folder), lists) => (folder, seqAsJavaList(lists))
+        val withFolder = listsIndex flatMap {
+          case (None, _) => Nil
+          case (Some(folder), lists) => List((folder, seqAsJavaList(lists)))
         }
         Ok(views.html.Application.lists(noFolder, withFolder)) as HTML
       }

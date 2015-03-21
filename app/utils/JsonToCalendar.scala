@@ -1,7 +1,5 @@
 package utils
 
-import net.fortuna.ical4j.model.property.XProperty
-
 object JsonToCalendar {
   import net.fortuna.ical4j.model.component.VEvent
   import play.api.libs.iteratee._
@@ -11,6 +9,7 @@ object JsonToCalendar {
   import scala.concurrent.ExecutionContext.Implicits.global
   
   import net.fortuna.ical4j.model._
+  import net.fortuna.ical4j.model.property.XProperty
 
   private val dueFormat = new java.text.SimpleDateFormat("yyyy-MM-dd")
 
@@ -48,8 +47,10 @@ object JsonToCalendar {
 
   private val props2task = Iteratee.fold[List[Property], Option[VEvent]](None) {
     (maybeEvent, props) =>
-      lazy val newEvent = new VEvent()
-      val event = maybeEvent.getOrElse(newEvent)
+      val event = maybeEvent match {
+        case None => new VEvent()
+        case Some(e) => e
+      }
       for (prop <- props)
         event.getProperties.add(prop)
       Some(event)
