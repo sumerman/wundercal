@@ -22,10 +22,10 @@ common: &default_settings
   # Otherwise, the agent reports only background tasks (transactions for non-web applications)
   # to this application. To report data to more than one application 
   # (useful for rollup reporting), separate the application names with ";".
-  # For example, to report data to "Wunderlist" and "My Application 2" use this:
-  # app_name: Wunderlist;My Application 2
+  # For example, to report data to "Wundercal" and "My Application 2" use this:
+  # app_name: Wundercal;My Application 2
   # This setting is required.
-  app_name: Wunderlist
+  app_name: Wundercal
   
   # To enable high security, set this property to true. When in high
   # security mode, the agent will use SSL and obfuscated SQL. Additionally,
@@ -254,15 +254,15 @@ common: &default_settings
 
 development:
   <<: *default_settings
-  app_name: Wunderlist (Development)
+  app_name: Wundercal (Development)
 
 test:
   <<: *default_settings
-  app_name: Wunderlist (Test)
+  app_name: Wundercal (Test)
 
 production:
   <<: *default_settings
 
 staging:
   <<: *default_settings
-  app_name: Wunderlist (Staging)
+  app_name: Wundercal (Staging)
