@@ -7,6 +7,7 @@ import play.api.mvc._
 import utils.{JsonToCalendar, WunderAPI}
 
 import scala.concurrent.Future
+import scala.language.postfixOps
 import scala.util.Random
 
 object Application extends Controller with WunderAPI {
@@ -14,14 +15,14 @@ object Application extends Controller with WunderAPI {
 
   def authFail = Redirect(routes.Auth.auth()).withNewSession
 
-  def encodeTaskListUrl(id: Long, token: String): String = {
+  private def encodeTaskListUrl(id: Long, token: String): String = {
     val salt = Crypto.sign(s"$id+$token")
     val salt1 = salt.substring(0, Random.nextInt(salt.length-5)+5)
     val string = s"$id+$salt1+$token+$salt1"
     Crypto.encryptAES(string)
   }
 
-  def decodeTaskListUrl(str: String): Option[(Long, String)] = {
+  private def decodeTaskListUrl(str: String): Option[(Long, String)] = {
     val decStr = Crypto.decryptAES(str)
     decStr.split("\\+") match {
       case Array(id, _, token, _) =>
@@ -30,7 +31,7 @@ object Application extends Controller with WunderAPI {
     }
   }
 
-  def makeCalendarUrl(id: Long, tok: String, req: Request[_]): String = {
+  private def makeCalendarUrl(id: Long, tok: String, req: Request[_]): String = {
     val calId = encodeTaskListUrl(id, tok)
     val hostRelative = routes.Application.tasksCalendar(calId).url
     s"webcal://${req.host}$hostRelative"
@@ -38,7 +39,7 @@ object Application extends Controller with WunderAPI {
 
   type ListId = Long
 
-  def getFoldersReverseIndex[A](apiReq: WunderAPIRequest[A]): Future[Map[ListId, String]] =
+  private def getFoldersReverseIndex[A](apiReq: WunderAPIRequest[A]): Future[Map[ListId, String]] =
     apiReq.json(Methods.Folders) map { jsonResp =>
       val jsonFolders = jsonResp.asOpt[List[JsObject]].getOrElse(Nil)
       jsonFolders flatMap { obj =>
@@ -49,7 +50,7 @@ object Application extends Controller with WunderAPI {
     }
 
   case class TaskList(id: ListId, name: String)
-  def getTaskLists[A](apiReq: WunderAPIRequest[A]): Future[List[TaskList]] =
+  private def getTaskLists[A](apiReq: WunderAPIRequest[A]): Future[List[TaskList]] =
     apiReq.json(Methods.Lists) map { jsonResp =>
       val jsItems = jsonResp.asOpt[List[JsObject]].getOrElse(Nil)
       for {
@@ -83,24 +84,30 @@ object Application extends Controller with WunderAPI {
     }
   }
 
+  private def getListTitle[A](apiReq: WunderAPIRequest[A], listId: ListId): Future[String] =
+    apiReq.json(Methods.List(listId)) map { listJs =>
+      (listJs \ "title").asOpt[String].getOrElse("")
+    }
+
+  private def getAlarmsIndex[A](apiReq: WunderAPIRequest[A], listId: ListId): Future[JsonToCalendar.AlarmsIndex] =
+    apiReq.stream(Methods.Reminders(listId)) flatMap {
+      case (_, remindersJs) =>
+        import JsonToCalendar._
+        remindersJs.run(bytes2string transform parseAlarmsToIndex)
+    }
+
   def tasksCalendar(taskListUrl: String) = decodeTaskListUrl(taskListUrl) match {
-    case None => Action { BadRequest("Invalid task list calendar id") }
-    case Some((listId, token)) => WunderAction(token).async { api =>
-      api.json(Methods.List(listId)) flatMap { listJs =>
-        val title = (listJs \ "title").asOpt[String].getOrElse("")
-        api.stream(Methods.Reminders(listId)) flatMap {
-          case (_, remindersJs) =>
-            val json2idx = JsonToCalendar.bytes2string &>> JsonToCalendar.parseAlarmsToIndex
-            remindersJs.run(json2idx) flatMap { alarmsIdx =>
-              api.stream(Methods.Tasks(listId)) flatMap {
-                case (_, body) =>
-                  val json2cal = JsonToCalendar.taskListParser(title, alarmsIdx)
-                  val parser = JsonToCalendar.bytes2string &>> json2cal
-                  body |>>> parser map { cal => Ok(cal.toString).as("text/calendar") }
-              }
-            }
-        }
-      }
+    case None =>
+      Action(BadRequest("Invalid task list calendar id"))
+    case Some((listId, token)) => WunderAction(token).async { apiReq =>
+      import JsonToCalendar._
+      for {
+        title <- getListTitle(apiReq, listId)
+        alarmsIdx <- getAlarmsIndex(apiReq, listId)
+        (_, tasksJs) <- apiReq.stream(Methods.Tasks(listId))
+        json2cal = taskListParser(title, alarmsIdx)
+        cal <- tasksJs.run(bytes2string transform json2cal)
+      } yield Ok(cal.toString).as("text/calendar")
     }
   }
 
