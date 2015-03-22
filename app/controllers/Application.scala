@@ -3,7 +3,6 @@ package controllers
 import play.api.libs.Crypto
 import play.api.libs.json._
 import play.api.mvc._
-import play.extras.iteratees.{Encoding, Combinators}
 
 import utils.{JsonToCalendar, WunderAPI}
 
@@ -89,11 +88,17 @@ object Application extends Controller with WunderAPI {
     case Some((listId, token)) => WunderAction(token).async { api =>
       api.json(Methods.List(listId)) flatMap { listJs =>
         val title = (listJs \ "title").asOpt[String].getOrElse("")
-        api.stream(Methods.Tasks(listId)) flatMap {
-          case (_, body) =>
-            val json2cal = JsonToCalendar.taskListParser(title)
-            val parser = Encoding.decode() ><> Combinators.errorReporter &>> json2cal
-            body |>>> parser map { cal => Ok(cal.toString).as("text/calendar") }
+        api.stream(Methods.Reminders(listId)) flatMap {
+          case (_, remindersJs) =>
+            val json2idx = JsonToCalendar.bytes2string &>> JsonToCalendar.parseAlarmsToIndex
+            remindersJs.run(json2idx) flatMap { alarmsIdx =>
+              api.stream(Methods.Tasks(listId)) flatMap {
+                case (_, body) =>
+                  val json2cal = JsonToCalendar.taskListParser(title, alarmsIdx)
+                  val parser = JsonToCalendar.bytes2string &>> json2cal
+                  body |>>> parser map { cal => Ok(cal.toString).as("text/calendar") }
+              }
+            }
         }
       }
     }
