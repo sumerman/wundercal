@@ -1,13 +1,8 @@
-import net.fortuna.ical4j.model.component.VEvent
-import play.api.libs.iteratee._
-import play.api.libs.json.JsString
-import play.extras.iteratees.{CharString, Combinators, Encoding}
-import play.extras.iteratees.JsonIteratees._
-import play.extras.iteratees.JsonEnumeratees._
+import play.api.libs.iteratee.Enumerator
+import play.extras.iteratees.CharString
+import utils.JsonToCalendar._
 import scala.concurrent.Await
 import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext.Implicits.global
-import net.fortuna.ical4j.model._
 val json = """
              |{
              |  "id": 1051180611,
@@ -31,64 +26,25 @@ val json2 = """
               |  "type": "task"
               |}
               |""".stripMargin
-
 val json3 = s"[$json,$json2,$json]"
 
-val dueFormat = new java.text.SimpleDateFormat("yyyy-MM-dd")
-
-val taskSchema = jsObject { field: String =>
-  field match {
-    case "id" =>
-      jsNumber map { idjs =>
-        val idStr = idjs.value.toString()
-        val uid = new property.Uid(s"wunderlist-task-$idStr")
-        val desc = new property.Description(s" wunderlist://tasks/$idStr")
-        List(uid, desc)
-      }
-    case "due_date" =>
-      jsNullOr(jsString) map {
-        case None => Nil
-        case Some(str) =>
-          val javaDate = dueFormat.parse(str.value)
-          val calDate = new net.fortuna.ical4j.model.Date(javaDate)
-          List(new property.DtStart(calDate))
-      }
-    case "title" =>
-      jsNullOr(jsString) map { topt =>
-        List(new property.Summary(topt.getOrElse(JsString("")).value))
-      }
-    case _ => jsValue.map(_ => Nil)
-  }
-}
-
-val ignore = Enumeratee.filterNot[List[Property]](_ == Nil)
-
-val buildEvent = Iteratee.fold[List[Property], Option[VEvent]](None) {
-  (maybeEvent, props) =>
-    lazy val newEvent = new VEvent()
-    val event = maybeEvent.getOrElse(newEvent)
-    for (prop <- props)
-      event.getProperties.add(prop)
-    Some(event)
-}.map(_.getOrElse(new VEvent()))
-
-val task = taskSchema ><> ignore &>> buildEvent
-
-val ignoreNoDate = Enumeratee.filterNot[VEvent](_.getStartDate == null)
-
-val buildCalendar = Iteratee.fold[VEvent, Option[Calendar]](None) {
-  (maybeCal, event) =>
-    lazy val newCal = new Calendar()
-    val cal = maybeCal.getOrElse(newCal)
-    cal.getComponents.add(event)
-    Some(cal)
-}.map(_.getOrElse(new Calendar()))
-
-val taskList = jsArray(_ => task) ><> ignoreNoDate &>> buildCalendar
-
-// Encoding.decode() ><> Combinators.errorReporter ><>
+val jsonReminders =
+  """
+    |[
+    |  {
+    |    "id": 52257864,
+    |    "date": "2015-03-21T01:00:00.000Z",
+    |    "task_id": 1055526595,
+    |    "revision": 1,
+    |    "created_at": "2015-03-22T00:07:54.885Z",
+    |    "updated_at": "2015-03-22T00:07:54.885Z",
+    |    "type": "reminder"
+    |  }
+    |]
+  """.stripMargin
+val json2cal = taskListParser("test cal")
 Await.result(
-  Enumerator(CharString.fromString(json3)) |>>> taskList,
+  Enumerator(CharString.fromString(json3)) |>>> json2cal,
   1 second
 )
 
