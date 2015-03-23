@@ -1,0 +1,69 @@
+@(title: String)(content: Html)
+
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title>Wundercal
+    @if(title != "") {
+         - @title
+    }
+    </title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap-theme.min.css">
+
+    <style type="text/css">
+        @@media (min-width: 0px) {
+        .container {
+        margin-top: 10px;
+        max-width: 500px;
+        }
+        }
+
+        .help-text {
+        padding: 10px;
+        }
+
+        .glyphicon {
+        margin-right: 5px;
+        }
+
+        .list-folder .task-list {
+        padding-left: 25px;
+        }
+    </style>
+</head>
+<body>
+<section class="content">
+<div class="container">
+
+    <div class="panel panel-danger">
+        <div class="panel-heading">
+            <div class="row">
+                <div class="col-xs-4"><img src="/assets/wundercal_logo.png" align="right" width="60px"></div>
+                <div class="col-xs-6"><h2>Wundercal</h2></div>
+            </div>
+        </div>
+        <div class="panel-body">
+            @content
+        </div>
+        <div class="panel-footer">
+            <div class="pull-right"><a class="github-button" href="https://github.com/sumerman/wundercal"
+                                       data-count-href="/sumerman/wundercal/stargazers"
+                                       data-count-api="/repos/sumerman/wundercal#stargazers_count">GitHub</a></div>
+            <div class="text-muted">Make Wundercal better</div>
+        </div>
+    </div>
+</div>
+</section>
+
+<!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+<!-- Include all compiled plugins (below), or include individual files as needed -->
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+<!-- Place this tag right after the last button or just before your close body tag. -->
+<script async defer id="github-bjs" src="https://buttons.github.io/buttons.js"></script>
+
+</body>
+</html>

@@ -1,85 +1,32 @@
 @(noFolder: List[(String, String)], folders: Map[String, List[(String, String)]])
 @import java.math.BigInteger; var i=0
 
-<!DOCTYPE html>
-<html>
-<head lang="en">
-    <meta charset="UTF-8">
-    <title>Wundercal</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap-theme.min.css">
+@listItem(name: String, url: String) = {
+    <a href="@url" class="list-group-item task-list"><span class="glyphicon glyphicon-calendar"></span>@name</a>
+}
 
-    <style type="text/css">
-        @@media (min-width: 0px) {
-            .container {
-                margin-top: 10px;
-                max-width: 500px;
-            }
-        }
-
-        .help-text {
-            padding: 10px;
-        }
-
-        .glyphicon {
-            margin-right: 5px;
-        }
-
-        .in-folder {
-            padding-left: 25px;
-        }
-    </style>
-</head>
-<body>
-<div class="container">
-
-    <div class="panel panel-danger">
+@main(title = "all lists") {
+    <div class="text-muted help-text">Click on a list to export it into your calender app</div>
+    <div class="panel panel-default list-folder">
+    @for((folder, items) <- folders) {
+        @{i += 1}
         <div class="panel-heading">
-            <div class="row">
-                <div class="col-xs-4"><img src="/assets/wundercal_logo.png" align="right" width="60px"></div>
-                <div class="col-xs-6"><h2>Wundercal</h2></div>
-            </div>
+            <a class="text-muted" data-toggle="collapse" href="#collapse-folder-@i">
+                <span class="glyphicon glyphicon-folder-open"></span>@folder
+            </a>
         </div>
-        <div class="panel-body">
-            <div class="text-muted help-text">Click on a list to export it into your calender app</div>
-            <div class="panel panel-default">
-            @for((folder, items) <- folders) {
-                @{i += 1}
-                <div class="panel-heading">
-                    <a class="text-muted" data-toggle="collapse" href="#collapse-folder-@i">
-                        <span class="glyphicon glyphicon-folder-open"></span>@folder
-                    </a>
-                </div>
-                <div id="collapse-folder-@i" class="panel-collapse collapse in" aria-expanded="true">
-                    <div class="list-group">
-                        @for(i @ (name, url) <- items) {
-                        <a href="@url" class="list-group-item in-folder"><span class="glyphicon glyphicon-calendar"></span>@name</a>
-                        }
-                    </div>
-                </div>
-            }
-            </div>
+        <div id="collapse-folder-@i" class="panel-collapse collapse in" aria-expanded="true">
             <div class="list-group">
-                @for(i @ (name, url) <- noFolder) {
-                <a href="@url" class="list-group-item"><span class="glyphicon glyphicon-calendar"></span>@name</a>
+                @for(i @ (name, url) <- items) {
+                    @listItem(name, url)
                 }
             </div>
         </div>
-        <div class="panel-footer">
-            <div class="pull-right"><a class="github-button" href="https://github.com/sumerman/wundercal"
-                                       data-count-href="/sumerman/wundercal/stargazers"
-                                       data-count-api="/repos/sumerman/wundercal#stargazers_count">GitHub</a></div>
-            <div class="text-muted">Make Wundercal better</div>
-        </div>
+    }
     </div>
-
-    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
-    <!-- Include all compiled plugins (below), or include individual files as needed -->
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
-    <!-- Place this tag right after the last button or just before your close body tag. -->
-    <script async defer id="github-bjs" src="https://buttons.github.io/buttons.js"></script>
-</div>
-</body>
-</html>
+    <div class="list-group">
+        @for(i @ (name, url) <- noFolder) {
+            @listItem(name, url)
+        }
+    </div>
+}

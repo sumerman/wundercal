@@ -8,7 +8,7 @@ import utils.{JsonToCalendar, WunderAPI}
 
 import scala.concurrent.Future
 import scala.language.postfixOps
-import scala.util.Random
+import scala.util.{Try, Random}
 
 object Application extends Controller with WunderAPI {
   import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -69,8 +69,7 @@ object Application extends Controller with WunderAPI {
         val folders = new HashMap[Option[String], Set[(String, String)]]
           with MultiMap[Option[String], (String, String)]
         taskLists foreach { tList =>
-          val calUrl = makeCalendarUrl(tList.id, apiReq.token, apiReq)
-          val item = (tList.name, calUrl)
+          val item = (tList.name, routes.Application.listDetails(tList.id).url)
           folders.addBinding(list2folder.get(tList.id), item)
         }
         val listsIndex = folders.toMap.mapValues(_.toList.sorted)
@@ -109,6 +108,29 @@ object Application extends Controller with WunderAPI {
         cal <- tasksJs.run(bytes2string transform json2cal)
       } yield Ok(cal.toString).as("text/calendar")
     }
+  }
+
+  def listDetails(listId: ListId) = WunderAction.async { apiReq =>
+    getListTitle(apiReq, listId) map { listTitle =>
+      Ok(views.html.Application.listDetails(listId, listTitle)) as HTML
+    }
+  }
+
+  object PostKeys {
+    val LIST_ID = "list_id"
+    val REMINDERS_COUNT = "reminders_count"
+    val REMINDERS_INTERVAL = "reminders_interval"
+  }
+
+  def genCalURI() = WunderAction { apiReq =>
+    val res = for {
+      params <- apiReq.body.asFormUrlEncoded
+      listIdSeq <- params.get(PostKeys.LIST_ID)
+      listIdStr <- listIdSeq.headOption
+      listId <- Try(listIdStr.toLong).toOption
+      _remindersSeq <- params.get(PostKeys.REMINDERS_COUNT)
+    } yield Redirect(makeCalendarUrl(listId, apiReq.token, apiReq))
+    res.getOrElse(BadRequest)
   }
 
 }

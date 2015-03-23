@@ -1,0 +1,47 @@
+@(listId: Long, listName:String)
+@import controllers.Application.PostKeys._
+
+@main(title = s"$listName details") {
+    <form class="form form-horizontal" role="form" action="@routes.Application.genCalURI()" autocomplete="on" method="POST">
+        <div class="form-group">
+            <label class="control-label col-sm-4">List</label>
+            <div class="col-sm-8">
+                <p class="form-control-static">@listName</p>
+                <input type="hidden" name="@LIST_ID" value="@listId">
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="reminders-cnt" class="control-label col-sm-4">Reminders count</label>
+            <div class="col-sm-8">
+                <!-- TODO reminders disabled message-->
+                <input type="number" min="0" class="form-control"
+                       id="reminders-cnt" name="@REMINDERS_COUNT" value="1">
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="reminders-int" class="control-label col-sm-4">Repeat interval</label>
+            <div class="col-sm-8">
+                <div class="input-group">
+                    <input type="number" min="1" class="form-control"
+                           id="reminders-int" name="@REMINDERS_INTERVAL" value="5">
+                    <div class="input-group-addon">minutes</div>
+                </div>
+            </div>
+        </div>
+        <div class="form-group">
+            <div class="col-sm-offset-4 col-sm-8">
+                <span id="helpBlock" class="help-block text-warning">
+                    Selected options will be stored right in the generated
+                    subscription URL. You will need to generate new URL and resubscribe
+                    if you want to change these settings.
+                </span>
+            </div>
+        </div>
+        <div class="form-group">
+            <div class="col-sm-offset-4 col-sm-8">
+                <a class="btn btn-default" role="button" href="@routes.Application.index()">Back</a>
+                <input type="submit" class="btn btn-danger" value="Get Calendar!">
+            </div>
+        </div>
+    </form>
+}
