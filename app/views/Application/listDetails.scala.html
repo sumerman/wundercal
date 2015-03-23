@@ -1,5 +1,10 @@
 @(listId: Long, listName:String)
 @import controllers.Application.PostKeys._
+@numericField(id: String, name: String, minVal: Int, value: Int) = {
+    <input type="number" min="@minVal" class="form-control"
+           onkeypress='return event.charCode >= 48 && event.charCode <= 57'
+           id="@id" pattern="\d*" name="@name" value="@value">
+}
 
 @main(title = s"$listName details") {
     <form class="form form-horizontal" role="form" action="@routes.Application.genCalURI()" autocomplete="on" method="POST">
@@ -14,16 +19,14 @@
             <label for="reminders-cnt" class="control-label col-sm-4">Reminders count</label>
             <div class="col-sm-8">
                 <!-- TODO reminders disabled message-->
-                <input type="number" min="0" class="form-control"
-                       id="reminders-cnt" name="@REMINDERS_COUNT" value="1">
+                @numericField("reminders-cnt", REMINDERS_COUNT, 0, 1)
             </div>
         </div>
         <div class="form-group">
             <label for="reminders-int" class="control-label col-sm-4">Repeat interval</label>
             <div class="col-sm-8">
                 <div class="input-group">
-                    <input type="number" min="1" class="form-control"
-                           id="reminders-int" name="@REMINDERS_INTERVAL" value="5">
+                    @numericField("reminders-int", REMINDERS_INTERVAL, 1, 5)
                     <div class="input-group-addon">minutes</div>
                 </div>
             </div>

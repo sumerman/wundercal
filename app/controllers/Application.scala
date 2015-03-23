@@ -128,7 +128,9 @@ object Application extends Controller with WunderAPI {
       listIdSeq <- params.get(PostKeys.LIST_ID)
       listIdStr <- listIdSeq.headOption
       listId <- Try(listIdStr.toLong).toOption
-      _remindersSeq <- params.get(PostKeys.REMINDERS_COUNT)
+      remindersSeq <- params.get(PostKeys.REMINDERS_COUNT)
+      remindersStr <- remindersSeq.headOption
+      remindersCnt <- Try(remindersStr.toInt).toOption
     } yield Redirect(makeCalendarUrl(listId, apiReq.token, apiReq))
     res.getOrElse(BadRequest)
   }
