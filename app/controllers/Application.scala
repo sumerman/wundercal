@@ -69,7 +69,7 @@ object Application extends Controller with WunderAPI {
         val folders = new HashMap[Option[String], Set[(String, String)]]
           with MultiMap[Option[String], (String, String)]
         taskLists foreach { tList =>
-          val item = (tList.name, routes.Application.listDetails(tList.id).url)
+          val item = (tList.name, routes.Application.listDetails(tList.id, Some(tList.name)).url)
           folders.addBinding(list2folder.get(tList.id), item)
         }
         val listsIndex = folders.toMap.mapValues(_.toList.sorted)
@@ -110,11 +110,15 @@ object Application extends Controller with WunderAPI {
     }
   }
 
-  def listDetails(listId: ListId) = WunderAction.async { apiReq =>
-    getListTitle(apiReq, listId) map { listTitle =>
-      Ok(views.html.Application.listDetails(listId, listTitle)) as HTML
+  def listDetails(listId: ListId, maybeListTitle: Option[String] = None) =
+    WunderAction.async { apiReq =>
+      val listTitleFut = maybeListTitle
+        .map(Future(_))
+        .getOrElse(getListTitle(apiReq, listId))
+      listTitleFut map { listTitle =>
+        Ok(views.html.Application.listDetails(listId, listTitle)) as HTML
+      }
     }
-  }
 
   object PostKeys {
     val LIST_ID = "list_id"
@@ -135,8 +139,8 @@ object Application extends Controller with WunderAPI {
       listId <- getIntFromForm(PostKeys.LIST_ID, params)
       remindersCnt <- getIntFromForm(PostKeys.REMINDERS_COUNT, params)
       remindersInt <- getIntFromForm(PostKeys.REMINDERS_INTERVAL, params)
-      remindersCnt >= 0
-      remindersInt > 0
+      if remindersCnt >= 0
+      if remindersInt > 0
     } yield Redirect(makeCalendarUrl(listId, apiReq.token, apiReq))
     res.getOrElse(BadRequest)
   }

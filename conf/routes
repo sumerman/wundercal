@@ -1,6 +1,6 @@
 GET  /               controllers.Application.index()
 GET  /lists          controllers.Application.index()
-GET  /lists/:listId  controllers.Application.listDetails(listId: Long)
+GET  /lists/:listId  controllers.Application.listDetails(listId: Long, title: Option[String] ?= None)
 POST /tasks          controllers.Application.genCalURI()
 GET  /tasks/:uid.ics controllers.Application.tasksCalendar(uid: String)
 GET  /tasks/:uid     controllers.Application.tasksCalendar(uid: String)
