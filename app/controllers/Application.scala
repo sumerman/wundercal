@@ -122,15 +122,21 @@ object Application extends Controller with WunderAPI {
     val REMINDERS_INTERVAL = "reminders_interval"
   }
 
+  private def getIntFromForm(key: String, form: Map[String, Seq[String]]): Option[Long] =
+    for {
+      seq <- form.get(key)
+      str <- seq.headOption
+      int <- Try(str.toLong).toOption
+    } yield int
+
   def genCalURI() = WunderAction { apiReq =>
     val res = for {
       params <- apiReq.body.asFormUrlEncoded
-      listIdSeq <- params.get(PostKeys.LIST_ID)
-      listIdStr <- listIdSeq.headOption
-      listId <- Try(listIdStr.toLong).toOption
-      remindersSeq <- params.get(PostKeys.REMINDERS_COUNT)
-      remindersStr <- remindersSeq.headOption
-      remindersCnt <- Try(remindersStr.toInt).toOption
+      listId <- getIntFromForm(PostKeys.LIST_ID, params)
+      remindersCnt <- getIntFromForm(PostKeys.REMINDERS_COUNT, params)
+      remindersInt <- getIntFromForm(PostKeys.REMINDERS_INTERVAL, params)
+      remindersCnt >= 0
+      remindersInt > 0
     } yield Redirect(makeCalendarUrl(listId, apiReq.token, apiReq))
     res.getOrElse(BadRequest)
   }
