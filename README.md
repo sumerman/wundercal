@@ -1,6 +1,6 @@
 # Wundercal
 
-![logo](/public/wundercal_logo.png?raw=tru)
+![logo](/public/wundercal_logo.png?raw=true =60px)
 
 Flexible calendar export for Wunderlist
 
