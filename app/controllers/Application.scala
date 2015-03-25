@@ -17,7 +17,7 @@ object Application extends Controller with WunderAPI {
 
   type ListId = Long
   case class ListCalDescriptor(id: ListId, wlToken: String,
-                               remindersCount: Int, remindersRepeatIntervalMin: Int)
+                               remindersCount: Int, remindersRepeatIntervalMin: Long)
 
   private def encodeTaskListUrl(list: ListCalDescriptor): String =
     list match {
@@ -70,7 +70,7 @@ object Application extends Controller with WunderAPI {
 
   def index = WunderAction.async { apiReq =>
     import collection.mutable.{HashMap, Set, MultiMap}
-    import scala.collection.JavaConversions._
+    import scala.collection.JavaConverters._
 
     getFoldersReverseIndex(apiReq) flatMap { list2folder =>
       getTaskLists(apiReq) map { taskLists =>
@@ -81,12 +81,12 @@ object Application extends Controller with WunderAPI {
           folders.addBinding(list2folder.get(tList.id), item)
         }
         val listsIndex = folders.toMap.mapValues(_.toList.sorted)
-        val noFolder = listsIndex.getOrDefault(None, Nil)
+        val noFolder = listsIndex.getOrElse(None, Nil)
         val withFolder = listsIndex flatMap {
           case (None, _) => Nil
-          case (Some(folder), lists) => List((folder, seqAsJavaList(lists)))
+          case (Some(folder), lists) => List((folder, lists.asJava))
         }
-        Ok(views.html.Application.lists(noFolder, withFolder)) as HTML
+        Ok(views.html.Application.lists(noFolder.asJava, withFolder.asJava)) as HTML
       }
     }
   }
@@ -96,26 +96,28 @@ object Application extends Controller with WunderAPI {
       (listJs \ "title").asOpt[String].getOrElse("")
     }
 
-  private def getAlarmsIndex[A](apiReq: WunderAPIRequest[A], listId: ListId): Future[JsonToCalendar.AlarmsIndex] =
+  private def getAlarmsIndex[A](apiReq: WunderAPIRequest[A], listId: ListId,
+                                count: Int, interval: Long): Future[JsonToCalendar.AlarmsIndex] =
     apiReq.stream(Methods.Reminders(listId)) flatMap {
       case (_, remindersJs) =>
         import JsonToCalendar._
-        remindersJs.run(bytes2string transform parseAlarmsToIndex)
+        remindersJs.run(bytes2string transform parseAlarmsToIndex(count, interval))
     }
 
   def tasksCalendar(taskListUrl: String) = decodeTaskListUrl(taskListUrl) match {
     case None =>
       Action(BadRequest("Invalid task list calendar id"))
-    case Some(ListCalDescriptor(listId, token, remCnt, remInt)) => WunderAction(token).async { apiReq =>
-      import JsonToCalendar._
-      for {
-        title <- getListTitle(apiReq, listId)
-        alarmsIdx <- getAlarmsIndex(apiReq, listId)
-        (_, tasksJs) <- apiReq.stream(Methods.Tasks(listId))
-        json2cal = taskListParser(title, alarmsIdx)
-        cal <- tasksJs.run(bytes2string transform json2cal)
-      } yield Ok(cal.toString).as("text/calendar")
-    }
+    case Some(ListCalDescriptor(listId, token, remCnt, remInt)) =>
+      WunderAction(token).async { apiReq =>
+        import JsonToCalendar._
+        for {
+          title <- getListTitle(apiReq, listId)
+          alarmsIdx <- getAlarmsIndex(apiReq, listId, remCnt, remInt)
+          (_, tasksJs) <- apiReq.stream(Methods.Tasks(listId))
+          json2cal = taskListParser(title, alarmsIdx)
+          cal <- tasksJs.run(bytes2string transform json2cal)
+        } yield Ok(cal.toString).as("text/calendar")
+      }
   }
 
   def listDetails(listId: ListId, maybeListTitle: Option[String] = None) =
@@ -150,7 +152,7 @@ object Application extends Controller with WunderAPI {
       if remindersCnt >= 0
       if remindersInt > 0
       repeatInt = remindersInt * 60000
-      calDesc = ListCalDescriptor(listId, apiReq.token, remindersCnt.toInt, remindersInt.toInt)
+      calDesc = ListCalDescriptor(listId, apiReq.token, remindersCnt.toInt, repeatInt)
     } yield Redirect(makeCalendarUrl(calDesc, apiReq))
     res.getOrElse(BadRequest)
   }

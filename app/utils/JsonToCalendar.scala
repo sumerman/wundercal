@@ -1,5 +1,6 @@
 package utils
 
+import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext
 
 object JsonToCalendar {
@@ -103,8 +104,8 @@ object JsonToCalendar {
           val taskId = taskIdProp.getValue
           alarmsIndex.get(taskId) match {
             case None =>
-            case Some(alarm) =>
-              event.getAlarms.add(alarm)
+            case Some(alarms) =>
+              for(a <- alarms) event.getAlarms.add(a)
           }
         }
         cal.getComponents.add(event)
@@ -126,15 +127,39 @@ object JsonToCalendar {
         Some(alarm)
     }
 
-  // In current state of Wunderlist there is
-  // at most one reminder per task
-  type AlarmsIndex = Map[String, VAlarm]
+  private def noisifyReminders(count: Int, interval: Long)
+                              (implicit ec: ExecutionContext) =
+    Enumeratee.mapConcat[VAlarm] { alarm: VAlarm =>
+      if (count <= 0) Nil
+      else if (count == 1) List(alarm)
+      else {
+        val additionalAlarms = (1 to count-1).toList map { n =>
+          val newAlarm = new VAlarm()
+          for (p <- alarm.getProperties.asScala) {
+            val prop = p.asInstanceOf[Property]
+            newAlarm.getProperties.add(prop.copy())
+          }
+          val t0 = alarm.getTrigger.getDateTime.getTime
+          val t1 = t0 + interval * n
+          val newDT = new DateTime(t1)
+          newAlarm.getTrigger.setDateTime(newDT)
+          newAlarm
+        }
+        alarm :: additionalAlarms
+      }
+    }
+
+  type AlarmsIndex = Map[String, List[VAlarm]]
   private def alarms2index(implicit ec: ExecutionContext) =
     Iteratee.fold[VAlarm, AlarmsIndex](Map.empty) {
       (index, alarm) =>
         val idProp = alarm.getProperty(X_WTASK_ID_PROP)
         if (idProp == null) index
-        else index + (idProp.getValue -> alarm)
+        else {
+          val key = idProp.getValue
+          val prevIdxEntry = index.getOrElse(key, Nil)
+          index + (key -> (alarm :: prevIdxEntry))
+        }
     }
 
   def bytes2string = Encoding.decode() compose Combinators.errorReporter
@@ -148,7 +173,9 @@ object JsonToCalendar {
 
   def alarmParser(implicit ec: ExecutionContext) =
     (reminderSchema compose getSome) transform props2alarms
-  def parseAlarmsToIndex(implicit ec: ExecutionContext) =
-    (jsArray(_ => alarmParser) compose getSome) transform alarms2index
+  def parseAlarmsToIndex(count: Int = 1, interval: Long = 0)(implicit ec: ExecutionContext) =
+    (jsArray(_ => alarmParser)
+      compose getSome
+      compose noisifyReminders(count, interval)) transform alarms2index
   
 }
