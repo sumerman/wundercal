@@ -1,6 +1,6 @@
 # Wundercal
 
-![logo](/public/wundercal_logo.png?raw=true =60px)
+![logo](/public/wundercal_logo.png?raw=true =60x)
 
 Flexible calendar export for Wunderlist
 
@@ -13,7 +13,7 @@ Flexible calendar export for Wunderlist
     
 ## Notes
 
-1. It's my first Plat app also I'm not an experienced Scala developer, so code reviews are welcome :)
+1. It's my first Play app also I'm not an experienced Scala developer, so code reviews are welcome :)
 2. Application config contains application key for the app that is registered as 'wundercal-test'.   
    For this app Wunderlist authentication will pass only if callback URL is set to `http://localhost:9000`
 3. To ran this app on your machine issue `sbt run` in the project root.    
