@@ -10,12 +10,11 @@ object JsonToCalendar {
   import play.extras.iteratees.JsonIteratees._
   import play.extras.iteratees.JsonEnumeratees._
   import play.extras.iteratees.{Encoding, Combinators}
-  
+
   import net.fortuna.ical4j.model._
   import net.fortuna.ical4j.model.property.XProperty
   import net.fortuna.ical4j.model.component.VAlarm
 
-  private val dueFormat = new java.text.SimpleDateFormat("yyyy-MM-dd")
   private val X_WTASK_ID_PROP = "X-WTASK-ID"
   private val dateFormat = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
 
@@ -33,9 +32,10 @@ object JsonToCalendar {
         jsNullOr(jsString) map {
           case None => Nil
           case Some(str) =>
-            val javaDate = dueFormat.parse(str.value)
-            val calDate = new net.fortuna.ical4j.model.Date(javaDate)
-            List(new property.DtStart(calDate))
+            val calDateStr = str.toString().filter(_.isDigit)
+            val params = new ParameterList()
+            params.add(parameter.Value.DATE)
+            List(new property.DtStart(params, calDateStr))
         }
       case "title" =>
         jsNullOr(jsString) map { topt =>
@@ -58,8 +58,8 @@ object JsonToCalendar {
           case None => None
           case Some(str) =>
             val dateTime = dateFormat.parse(str.value)
-            val calDate = new net.fortuna.ical4j.model.DateTime(dateTime)
-            Some(new property.Trigger(calDate))
+            val calDateTime = new net.fortuna.ical4j.model.DateTime(dateTime)
+            Some(new property.Trigger(calDateTime))
         }
       case _ => jsValue.map(_ => None)
     }

@@ -60,5 +60,5 @@ trait AuthBase { self: Controller =>
 
 object Auth extends Controller with AuthBase {
   def wunderbackRoute = routes.Auth.wunderback()
-  def successRoute = routes.Application.index()
+  def successRoute = routes.Lists.index()
 }

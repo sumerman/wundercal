@@ -8,7 +8,7 @@ import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.JsValue
 import play.api.mvc._
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 
 trait WunderAPI {
   import play.api.Play.current
