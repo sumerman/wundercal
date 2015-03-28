@@ -17,7 +17,7 @@ object JsonToCalendar {
 
   val X_WTASK_ID_PROP = "X-WTASK-ID"
   val X_CALNAME = "X-WR-CALNAME"
-  private val dateFormat = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
+  val reminderDateFormat = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
 
   private def taskSchema(implicit ec: ExecutionContext) = jsObject { field: String =>
     field match {
@@ -58,7 +58,7 @@ object JsonToCalendar {
         jsNullOr(jsString) map {
           case None => None
           case Some(str) =>
-            val dateTime = dateFormat.parse(str.value)
+            val dateTime = reminderDateFormat.parse(str.value)
             val calDateTime = new net.fortuna.ical4j.model.DateTime(dateTime)
             Some(new property.Trigger(calDateTime))
         }
