@@ -39,7 +39,6 @@ trait ListsAPIWrappers extends WunderAPI {
 }
 
 object Lists extends Controller with WunderAPI with ListsAPIWrappers {
-  import utils._
   import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
   def authFail = Redirect(routes.Auth.auth()).withNewSession
