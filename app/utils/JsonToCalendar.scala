@@ -15,7 +15,8 @@ object JsonToCalendar {
   import net.fortuna.ical4j.model.property.XProperty
   import net.fortuna.ical4j.model.component.VAlarm
 
-  private val X_WTASK_ID_PROP = "X-WTASK-ID"
+  val X_WTASK_ID_PROP = "X-WTASK-ID"
+  val X_CALNAME = "X-WR-CALNAME"
   private val dateFormat = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
 
   private def taskSchema(implicit ec: ExecutionContext) = jsObject { field: String =>
@@ -94,7 +95,7 @@ object JsonToCalendar {
           case None =>
             val newCal = new Calendar()
             newCal.getProperties.add(new property.Name(name))
-            newCal.getProperties.add(new XProperty("X-WR-CALNAME", name))
+            newCal.getProperties.add(new XProperty(X_CALNAME, name))
             newCal.getProperties.add(property.Version.VERSION_2_0)
             newCal.getProperties.add(property.CalScale.GREGORIAN)
             newCal
