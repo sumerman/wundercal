@@ -46,6 +46,7 @@ trait WunderAPI {
   }
 
   case object UnauthorizedException extends Exception
+  case class  UpstreamError(status: Int) extends Exception
 
   import play.api.libs.ws._
 
@@ -71,16 +72,21 @@ trait WunderAPI {
 
     private def call_json(authToken: String)(m: Method): Future[JsValue] =
       call_base(authToken, m).get().map {
-        case resp if resp.status == 200 => resp.json
+        case resp if (resp.status >= 200) && (resp.status < 300) =>
+          resp.json
         case resp if resp.status == 401 =>
           throw UnauthorizedException
+        case resp =>
+          throw UpstreamError(resp.status)
       }
 
     private def call_stream(authToken: String)(m: Method): Future[Response] =
       call_base(authToken, m).getStream().map {
-        case resp@(h, body) if h.status == 200 => resp
+        case resp@(h, body) if  (h.status >= 200) && (h.status < 300) => resp
         case resp@(h, _)    if h.status == 401 =>
           throw UnauthorizedException
+        case resp@(h, _) =>
+          throw UpstreamError(h.status)
       }
 
     override def invokeBlock[A](r: Request[A], block: WunderAPIRequest[A] => Future[Result]) = {
@@ -95,6 +101,8 @@ trait WunderAPI {
           }
           block(api) recover {
             case UnauthorizedException => authFail
+            case UpstreamError(status) =>
+              Status(status)
             case e: ConnectException =>
               Logger.error("Wunderlist API is unreachable", e)
               ServiceUnavailable
